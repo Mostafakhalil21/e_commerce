@@ -3,7 +3,8 @@ import { InputLabel , Select , MenuItem , Button , Grid , Typography } from '@ma
 import {useForm , FormProvider} from 'react-hook-form';
 import CustomTextField from './CustomTextField';
 import { commerce } from '../../lib/commerce';
-const AdressForm = ({checkoutToken}) => {
+import {Link} from 'react-router-dom'
+const AdressForm = ({checkoutToken , next}) => {
     
     const [shippingCountries, setShippingCountries] = useState([]);
     const [shippingCountry, setShippingCountry] = useState('');
@@ -11,7 +12,7 @@ const AdressForm = ({checkoutToken}) => {
     const [shippingSubdivision, setShippingSubdivision] = useState('');
     const [shippingOptions, setShippingOptions] = useState([]);
     const [shippingOption, setShippingOption] = useState('');
-
+    const methods = useForm();
     const fetchShippingCountries = async (checkoutTokenId) => {
         const {countries} = await commerce.services.localeListShippingCountries(checkoutTokenId);
             console.log(countries)
@@ -20,26 +21,46 @@ const AdressForm = ({checkoutToken}) => {
     
     }
 
+    const fetchSubdivisions = async (counrtyCode) => {
+        const {subdivisions} = await commerce.services.localeListSubdivisions(counrtyCode)
+        setShippingSubdivisions(subdivisions);
+        setShippingSubdivision(Object.keys(subdivisions)[0]);
+    }
+
+    const fetchShippingOptions = async (checkoutTokenId , country , region = null) => { 
+        const options = await commerce.checkout.getShippingOptions(checkoutTokenId,{country , region});
+        setShippingOptions(options)
+        setShippingOption(options[0].id)
+    }
+
     const countries =Object.entries(shippingCountries).map(([code , name]) =>({id:code , label:name}))
-        console.log(countries)
-    const methods = useForm();
+    const subdivisions =Object.entries(shippingSubdivisions).map(([code , name]) =>({id:code , label:name}))
+    const options = shippingOptions.map((sO) => ({id: sO.id , label: `${sO.description} - (${sO.price.formatted_with_symbol})`}))
+
 
     useEffect(() => {
        
         fetchShippingCountries(checkoutToken.id);
     },[])
+    useEffect(() => {
+        if (shippingCountry) fetchSubdivisions(shippingCountry);
+    },[shippingCountry]);
+
+    useEffect(()=> {
+        if (shippingSubdivision) fetchShippingOptions(checkoutToken.id, shippingCountry, shippingSubdivision);
+    },[shippingSubdivision])
   return (
    <>
     <Typography variant="h6" gutterBottom>Shipping Address</Typography>
     <FormProvider {...methods} > 
-        <form onSubmit=''>
+        <form onSubmit={methods.handleSubmit((data) => next({...data , shippingCountry , shippingSubdivision , shippingOption}))}>
             <Grid container spacing={3}>
-                <CustomTextField required name='firstName' label='First name' />
-                <CustomTextField required name='lastName' label='Last name' />
-                <CustomTextField required name='address1' label='Address' />
-                <CustomTextField required name='email' label='Email' />
-                <CustomTextField required name='city' label='City' />
-                <CustomTextField required name='zip' label='ZIP / Post code' />
+                <CustomTextField  name='firstName' label='First name' />
+                <CustomTextField  name='lastName' label='Last name' />
+                <CustomTextField  name='address1' label='Address' />
+                <CustomTextField  name='email' label='Email' />
+                <CustomTextField  name='city' label='City' />
+                <CustomTextField  name='zip' label='ZIP / Post code' />
                 <Grid item xs={12} sm={6} >
                 <InputLabel>Shipping Country</InputLabel>
                 <Select value={shippingCountry} fullWidth onChange={(e) => setShippingCountry(e.target.value)}>
@@ -52,25 +73,35 @@ const AdressForm = ({checkoutToken}) => {
                 </Select>
 
                 </Grid>
-                {/* <Grid item xs={12} sm={6} >
+                <Grid item xs={12} sm={6} >
                 <InputLabel>Shipping Subdivision</InputLabel>
-                <Select value={} fullWidth onChange={}>
-                    <MenuItem key={} value={}>
-                        Select Me
-                    </MenuItem>
+                <Select value={shippingSubdivision} fullWidth onChange={(e) => setShippingSubdivision(e.target.value)}>
+                        {subdivisions.map((Subdivision) => (
+                        <MenuItem key={Subdivision.id} value={Subdivision.id}>
+                            {Subdivision.label}
+                            </MenuItem>
+                        ))}
+                 
                 </Select>
 
                 </Grid>
                 <Grid item xs={12} sm={6} >
                 <InputLabel>Shipping Options</InputLabel>
-                <Select value={} fullWidth onChange={}>
-                    <MenuItem key={} value={}>
-                        Select Me
-                    </MenuItem>
+                <Select value={shippingOption} fullWidth onChange={(e) => setShippingOption(e.target.value)}>
+                {options.map((option) => (
+                        <MenuItem key={option.id} value={option.id}>
+                            {option.label}
+                            </MenuItem>
+                            ))}
                 </Select>
 
-                </Grid> */}
+                </Grid>
             </Grid>
+            <br />
+            <div style={{display:'flex' , justifyContent: 'space-between'}}>
+                        <Button component={Link} to="/cart"  variant="outlined">Back to Cart</Button>
+                        <Button type="submit" variant="contained" color='primary'>Next</Button>
+            </div>
         </form>
     </FormProvider>
    </>
