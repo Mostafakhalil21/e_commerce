@@ -8,13 +8,18 @@ const CustomTextField = ({ name, label }) => {
     <Grid item xs={12} sm={6}>
     <Controller
         control={control}
+        defaultValue=""
         name={name}
-        render = {({ field})=> (
-            <TextField
-                fullWidth
-                label={label}
-                required
-            />
+        render = {({  field: { ref, ...field }, fieldState  })=> (
+                <TextField
+                    fullWidth
+                    name={name}
+                    {...field}
+                    inputRef={ref}
+                    label={label}
+                    rules={{ required: true }}
+                />
+      
         )}
     />
 </Grid>
